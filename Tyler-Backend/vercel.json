@@ -1,0 +1,34 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "server.js",
+            "use": "@vercel/node",
+            "config": {
+                "buildCommand": "npm run vercel-build"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/payments/webhook",
+            "methods": ["POST"],
+            "dest": "/server.js"
+        },
+        {
+            "src": "/api/(.*)",
+            "dest": "/server.js"
+        },
+        {
+            "src": "/routes/(.*)",
+            "dest": "/server.js"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/server.js"
+        }
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    }
+}

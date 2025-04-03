@@ -1,0 +1,10 @@
+html , body{
+    overflow-x: hidden!important;
+}
+
+@media (max-width: 768px) {
+    .d-n {
+       display: none;
+    }
+
+}
