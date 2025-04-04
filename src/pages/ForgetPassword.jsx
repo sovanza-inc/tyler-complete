@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../assets/css/forgot.css';
-
+// API URL configuration
+const isDevelopment = process.env.NODE_ENV === 'development';
+const API_BASE_URL = isDevelopment 
+  ? import.meta.env.APP_API_URL || 'http://localhost:5000'
+  : 'https://tyler-complete-slvb.vercel.app';
+  
 const ForgetPassword = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -66,11 +71,12 @@ const ForgetPassword = () => {
 
     try {
       const otp = formData.otp.join(''); // Combine OTP digits into a single string
-      const response = await fetch('http://localhost:5000/api/auth/confirm-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/confirm-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email: formData.email, otp: otp.toString() }),
       });
 
