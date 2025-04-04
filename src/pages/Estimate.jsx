@@ -3,7 +3,8 @@ import axios from 'axios';
 import '../assets/css/estimate.css';
 import Breadcrums from '../Componenets/Breadcrums';
 import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2';
+import Swal from 'sweetalert2/dist/sweetalert2.js';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 // API URL configuration
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -95,8 +96,15 @@ const Estimate = () => {
       try {
         setIsUploading(true);
         
-        // Show loading alert
-        Swal.fire({
+        // Show loading alert with custom styling
+        const loadingAlert = Swal.mixin({
+          customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-danger'
+          }
+        });
+
+        loadingAlert.fire({
           title: 'Uploading...',
           html: 'Please wait while we upload your file',
           allowOutsideClick: false,
@@ -116,21 +124,32 @@ const Estimate = () => {
 
         setFiles((prevFiles) => [...prevFiles, response.data]);
         
-        // Close loading alert and show success
-        Swal.fire({
+        // Show success alert
+        await loadingAlert.fire({
           icon: 'success',
           title: 'Success!',
           text: 'File uploaded successfully',
           timer: 2000,
-          showConfirmButton: false
+          showConfirmButton: false,
+          customClass: {
+            popup: 'swal2-show',
+            title: 'swal2-title',
+            content: 'swal2-content'
+          }
         });
       } catch (error) {
         console.error('Error uploading file:', error);
         Swal.fire({
           icon: 'error',
           title: 'Upload Failed',
-          text: error.message || 'Failed to upload file',
-          confirmButtonText: 'OK'
+          text: error.response?.data?.error || error.message || 'Failed to upload file',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'swal2-show',
+            title: 'swal2-title',
+            content: 'swal2-content',
+            confirmButton: 'btn btn-danger'
+          }
         });
       } finally {
         setIsUploading(false);
@@ -140,7 +159,13 @@ const Estimate = () => {
         icon: 'warning',
         title: 'Invalid File',
         text: 'Please upload a valid PDF file.',
-        confirmButtonText: 'OK'
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'swal2-show',
+          title: 'swal2-title',
+          content: 'swal2-content',
+          confirmButton: 'btn btn-warning'
+        }
       });
     }
   };
