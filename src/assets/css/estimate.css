@@ -588,3 +588,62 @@
     background-color: var(--color-status-error);
     color: white;
   }
+
+.upload-button {
+    transition: opacity 0.3s ease;
+}
+
+.upload-button.disabled {
+    pointer-events: none;
+}
+
+/* SweetAlert2 custom styles */
+.swal2-popup {
+    font-family: inherit;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.swal2-title {
+    color: var(--color-text-dark);
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.swal2-html-container {
+    color: var(--color-text-medium);
+    font-size: 1rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.btn:focus {
+    box-shadow: none;
+}
+
+.btn-success {
+    background: linear-gradient(45deg, var(--color-status-success), #059669) !important;
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, var(--color-status-error), #dc2626) !important;
+    border: none;
+}
+
+.btn-warning {
+    background: linear-gradient(45deg, var(--color-status-warning), #d97706) !important;
+    border: none;
+    color: white !important;
+}
+
+.swal2-loader {
+    border-color: var(--color-accent-500) transparent var(--color-accent-500) transparent;
+}

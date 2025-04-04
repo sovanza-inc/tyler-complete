@@ -2,6 +2,9 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import '../assets/css/estimate.css';
 import Breadcrums from '../Componenets/Breadcrums';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2/dist/sweetalert2.js';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 // API URL configuration
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -11,6 +14,7 @@ const API_BASE_URL = isDevelopment
 
 const Estimate = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const [estimateData, setEstimateData] = useState([
     {
       contractor: 'Contractor A',
@@ -37,20 +41,35 @@ const Estimate = () => {
   const [editingFile, setEditingFile] = useState(null);
   const [newFile, setNewFile] = useState(null);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchFiles = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No authentication token found');
+          navigate('/signin');
+          return;
+        }
+
         const response = await axios.get(`${API_BASE_URL}/api/files/files`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
           withCredentials: true
         });
-        setFiles(response.data || []);
+
+        if (response.data) {
+          setFiles(response.data);
+          setFilteredFiles(response.data);
+        }
       } catch (error) {
         console.error('Error fetching files:', error);
-        setFiles([]);
+        if (error.response?.status === 401) {
+          navigate('/signin');
+        }
       }
     };
 
@@ -75,6 +94,25 @@ const Estimate = () => {
       formData.append('file', file);
 
       try {
+        setIsUploading(true);
+        
+        // Show loading alert with custom styling
+        const loadingAlert = Swal.mixin({
+          customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-danger'
+          }
+        });
+
+        loadingAlert.fire({
+          title: 'Uploading...',
+          html: 'Please wait while we upload your file',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
         const token = localStorage.getItem('token');
         const response = await axios.post(`${API_BASE_URL}/api/files/upload`, formData, {
           headers: { 
@@ -83,13 +121,52 @@ const Estimate = () => {
           },
           withCredentials: true
         });
+
         setFiles((prevFiles) => [...prevFiles, response.data]);
+        
+        // Show success alert
+        await loadingAlert.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'File uploaded successfully',
+          timer: 2000,
+          showConfirmButton: false,
+          customClass: {
+            popup: 'swal2-show',
+            title: 'swal2-title',
+            content: 'swal2-content'
+          }
+        });
       } catch (error) {
         console.error('Error uploading file:', error);
-        alert('Failed to upload file: ' + error.message);
+        Swal.fire({
+          icon: 'error',
+          title: 'Upload Failed',
+          text: error.response?.data?.error || error.message || 'Failed to upload file',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'swal2-show',
+            title: 'swal2-title',
+            content: 'swal2-content',
+            confirmButton: 'btn btn-danger'
+          }
+        });
+      } finally {
+        setIsUploading(false);
       }
     } else {
-      alert('Please upload a valid PDF file.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Invalid File',
+        text: 'Please upload a valid PDF file.',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'swal2-show',
+          title: 'swal2-title',
+          content: 'swal2-content',
+          confirmButton: 'btn btn-warning'
+        }
+      });
     }
   };
 
@@ -202,9 +279,14 @@ const Estimate = () => {
           style={{ display: 'none' }} 
           onChange={handleUpload} 
           accept="application/pdf"
+          disabled={isUploading}
         />
-        <label htmlFor="file-upload" className="action-button upload-button">
-          Upload PDF
+        <label 
+          htmlFor="file-upload" 
+          className={`action-button upload-button ${isUploading ? 'disabled' : ''}`}
+          style={{ opacity: isUploading ? 0.7 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}
+        >
+          {isUploading ? 'Uploading...' : 'Upload PDF'}
         </label>
       </div>
 

@@ -8,6 +8,7 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs');
+const authMiddleware = require('./middleware/auth');
 
 
 // const prisma = new PrismaClient();
@@ -44,7 +45,7 @@ const upload = multer({
     }
 });
 
-app.post('/api/files/upload', upload.single('file'), async (req, res) => {
+app.post('/api/files/upload', authMiddleware, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -55,11 +56,12 @@ app.post('/api/files/upload', upload.single('file'), async (req, res) => {
         const base64File = req.file.buffer.toString('base64');
         const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
 
-        // Save file metadata to the database
+        // Save file metadata to the database with user association
         const newFile = await prisma.file.create({
             data: {
                 name: req.file.originalname,
-                url: fileUrl
+                url: fileUrl,
+                userId: req.userId // Add user association
             }
         });
 
@@ -71,9 +73,17 @@ app.post('/api/files/upload', upload.single('file'), async (req, res) => {
 });
 
 // Fetch all files endpoint
-app.get('/api/files/files', async (req, res) => {
+app.get('/api/files/files', authMiddleware, async (req, res) => {
     try {
-        const files = await prisma.file.findMany();
+        // Get only files belonging to the authenticated user
+        const files = await prisma.file.findMany({
+            where: {
+                userId: req.userId
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
         res.status(200).json(files);
     } catch (error) {
         console.error('Error fetching files:', error);
@@ -82,18 +92,25 @@ app.get('/api/files/files', async (req, res) => {
 });
 
 // Update file endpoint
-app.put('/api/files/:id', upload.single('file'), async (req, res) => {
+app.put('/api/files/:id', authMiddleware, upload.single('file'), async (req, res) => {
     try {
         const { id } = req.params;
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        // Convert file to base64
+        // Verify file ownership
+        const existingFile = await prisma.file.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!existingFile || existingFile.userId !== req.userId) {
+            return res.status(403).json({ error: 'Not authorized to update this file' });
+        }
+
         const base64File = req.file.buffer.toString('base64');
         const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
 
-        // Update file metadata in the database
         const updatedFile = await prisma.file.update({
             where: { id: parseInt(id) },
             data: {
@@ -110,13 +127,21 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
 });
 
 // Delete file endpoint
-app.delete('/api/files/:id', async (req, res) => {
+app.delete('/api/files/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Delete file metadata from the database
+        // Verify file ownership
+        const existingFile = await prisma.file.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!existingFile || existingFile.userId !== req.userId) {
+            return res.status(403).json({ error: 'Not authorized to delete this file' });
+        }
+
         await prisma.file.delete({
-            where: { id: parseInt(id) },
+            where: { id: parseInt(id) }
         });
 
         res.status(204).send();
