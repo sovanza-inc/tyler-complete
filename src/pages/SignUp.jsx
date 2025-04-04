@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../assets/css/auth.css';
 
+// API URL configuration
+const isDevelopment = process.env.NODE_ENV === 'development';
+const API_BASE_URL = isDevelopment 
+  ? import.meta.env.APP_API_URL || 'http://localhost:5000'
+  : 'https://tyler-complete-slvb.vercel.app';
+
 const SignUp = () => {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -52,11 +58,12 @@ const SignUp = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           fullName: formData.fullName,
           email: formData.email,
