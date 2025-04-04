@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import '../assets/css/estimate.css';
 import Breadcrums from '../Componenets/Breadcrums';
+import Swal from 'sweetalert2';
 
 // API URL configuration
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -36,6 +37,7 @@ const Estimate = () => {
   const [filteredFiles, setFilteredFiles] = useState([]);
   const [editingFile, setEditingFile] = useState(null);
   const [newFile, setNewFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -75,6 +77,7 @@ const Estimate = () => {
       formData.append('file', file);
 
       try {
+        setIsUploading(true);
         const token = localStorage.getItem('token');
         const response = await axios.post(`${API_BASE_URL}/api/files/upload`, formData, {
           headers: { 
@@ -84,12 +87,31 @@ const Estimate = () => {
           withCredentials: true
         });
         setFiles((prevFiles) => [...prevFiles, response.data]);
+        
+        // Show success alert
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'File uploaded successfully',
+          timer: 2000,
+          showConfirmButton: false
+        });
       } catch (error) {
         console.error('Error uploading file:', error);
-        alert('Failed to upload file: ' + error.message);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error!',
+          text: 'Failed to upload file: ' + error.message
+        });
+      } finally {
+        setIsUploading(false);
       }
     } else {
-      alert('Please upload a valid PDF file.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid File',
+        text: 'Please upload a valid PDF file.'
+      });
     }
   };
 
@@ -202,9 +224,17 @@ const Estimate = () => {
           style={{ display: 'none' }} 
           onChange={handleUpload} 
           accept="application/pdf"
+          disabled={isUploading}
         />
-        <label htmlFor="file-upload" className="action-button upload-button">
-          Upload PDF
+        <label htmlFor="file-upload" className={`action-button upload-button ${isUploading ? 'uploading' : ''}`}>
+          {isUploading ? (
+            <span className="loading-text">
+              <div className="spinner"></div>
+              Uploading...
+            </span>
+          ) : (
+            'Upload PDF'
+          )}
         </label>
       </div>
 
