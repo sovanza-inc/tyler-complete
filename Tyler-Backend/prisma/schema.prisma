@@ -26,7 +26,6 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   payments     Payment[]
-  files        File[]
 }
 
 model Payment {
@@ -47,8 +46,6 @@ model File {
   id        Int      @id @default(autoincrement())
   name      String   // Name of the file
   url       String   // URL to access the file
-  userId    String   // Foreign key to User
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) // Timestamp of file upload
+  updatedAt DateTime @updatedAt // Timestamp of last update
 }

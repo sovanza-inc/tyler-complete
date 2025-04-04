@@ -8,8 +8,6 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs');
-const authMiddleware = require('./middleware/auth');
-const jwt = require('jsonwebtoken');
 
 
 // const prisma = new PrismaClient();
@@ -18,11 +16,12 @@ const app = express();
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://tyler-complete.vercel.app']
-        : ['http://localhost:5173'],
+        ? ['https://tyler-complete.vercel.app', 'https://tyler-complete-slvb.vercel.app']
+        : ['http://localhost:5000', 'http://localhost:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie']
 }));
 
 // Stripe webhook needs raw body 
@@ -43,100 +42,58 @@ const upload = multer({
             cb(new Error('Only PDF files are allowed'));
         }
     }
-}).single('file');
-
-// File upload endpoint with error handling
-app.post('/api/files/upload', (req, res) => {
-    upload(req, res, async (err) => {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({ error: 'File upload error', details: err.message });
-        } else if (err) {
-            return res.status(400).json({ error: 'Invalid file type. Only PDF files are allowed.' });
-        }
-
-        try {
-            // Verify authentication
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({ error: 'No token provided' });
-            }
-
-            const token = authHeader.split(' ')[1];
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.userId = decoded.userId;
-
-            if (!req.file) {
-                return res.status(400).json({ error: 'No file uploaded' });
-            }
-
-            // Convert file to base64
-            const base64File = req.file.buffer.toString('base64');
-            const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
-
-            // Save file metadata to database
-            const newFile = await prisma.file.create({
-                data: {
-                    name: req.file.originalname,
-                    url: fileUrl,
-                    userId: req.userId
-                }
-            });
-
-            res.status(201).json(newFile);
-        } catch (error) {
-            console.error('Error uploading file:', error);
-            if (error.name === 'JsonWebTokenError') {
-                return res.status(401).json({ error: 'Invalid token' });
-            }
-            res.status(500).json({ 
-                error: 'Failed to upload file',
-                details: error.message 
-            });
-        }
-    });
 });
 
-// Fetch files endpoint with improved error handling
-app.get('/api/files/files', authMiddleware, async (req, res) => {
+app.post('/api/files/upload', upload.single('file'), async (req, res) => {
     try {
-        const files = await prisma.file.findMany({
-            where: {
-                userId: req.userId
-            },
-            orderBy: {
-                createdAt: 'desc'
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        // For now, we'll store the file data in base64 format in the URL field
+        // In production, you should use a cloud storage service like AWS S3
+        const base64File = req.file.buffer.toString('base64');
+        const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
+
+        // Save file metadata to the database
+        const newFile = await prisma.file.create({
+            data: {
+                name: req.file.originalname,
+                url: fileUrl
             }
         });
-        res.json(files);
+
+        res.status(201).json(newFile);
+    } catch (error) {
+        console.error('Error uploading file:', error);
+        res.status(500).json({ error: 'Failed to upload file' });
+    }
+});
+
+// Fetch all files endpoint
+app.get('/api/files/files', async (req, res) => {
+    try {
+        const files = await prisma.file.findMany();
+        res.status(200).json(files);
     } catch (error) {
         console.error('Error fetching files:', error);
-        res.status(500).json({ 
-            error: 'Failed to fetch files',
-            details: error.message 
-        });
+        res.status(500).json({ error: 'Failed to fetch files' });
     }
 });
 
 // Update file endpoint
-app.put('/api/files/:id', authMiddleware, upload.single('file'), async (req, res) => {
+app.put('/api/files/:id', upload.single('file'), async (req, res) => {
     try {
         const { id } = req.params;
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        // Verify file ownership
-        const existingFile = await prisma.file.findUnique({
-            where: { id: parseInt(id) }
-        });
-
-        if (!existingFile || existingFile.userId !== req.userId) {
-            return res.status(403).json({ error: 'Not authorized to update this file' });
-        }
-
+        // Convert file to base64
         const base64File = req.file.buffer.toString('base64');
         const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
 
+        // Update file metadata in the database
         const updatedFile = await prisma.file.update({
             where: { id: parseInt(id) },
             data: {
@@ -153,21 +110,13 @@ app.put('/api/files/:id', authMiddleware, upload.single('file'), async (req, res
 });
 
 // Delete file endpoint
-app.delete('/api/files/:id', authMiddleware, async (req, res) => {
+app.delete('/api/files/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Verify file ownership
-        const existingFile = await prisma.file.findUnique({
-            where: { id: parseInt(id) }
-        });
-
-        if (!existingFile || existingFile.userId !== req.userId) {
-            return res.status(403).json({ error: 'Not authorized to delete this file' });
-        }
-
+        // Delete file metadata from the database
         await prisma.file.delete({
-            where: { id: parseInt(id) }
+            where: { id: parseInt(id) },
         });
 
         res.status(204).send();
