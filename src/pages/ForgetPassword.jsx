@@ -141,11 +141,12 @@ const ForgetPassword = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/generate-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/generate-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email: formData.email }),
       });
 
@@ -172,11 +173,12 @@ const ForgetPassword = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           email: formData.email,
           newPassword: formData.newPassword,
