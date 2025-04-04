@@ -6,7 +6,7 @@ import '../assets/css/auth.css';
 const isDevelopment = process.env.NODE_ENV === 'development';
 const API_BASE_URL = isDevelopment 
   ? import.meta.env.APP_API_URL || 'http://localhost:5000'
-  : 'https://tyler-backend-khaki.vercel.app';
+  : 'https://tyler-complete-slvb.vercel.app';
 
 
 const SignIn = () => {
@@ -66,6 +66,7 @@ const SignIn = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
