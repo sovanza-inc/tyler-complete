@@ -9,6 +9,7 @@ const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs');
 const authMiddleware = require('./middleware/auth');
+const jwt = require('jsonwebtoken');
 
 
 // const prisma = new PrismaClient();
@@ -17,8 +18,8 @@ const app = express();
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://tyler-complete.vercel.app', 'https://tyler-complete-slvb.vercel.app']
-        : ['http://localhost:5000', 'http://localhost:5173'],
+        ? ['https://tyler-complete.vercel.app']
+        : ['http://localhost:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -42,38 +43,60 @@ const upload = multer({
             cb(new Error('Only PDF files are allowed'));
         }
     }
-});
+}).single('file');
 
-app.post('/api/files/upload', authMiddleware, upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
+// File upload endpoint with error handling
+app.post('/api/files/upload', (req, res) => {
+    upload(req, res, async (err) => {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({ error: 'File upload error', details: err.message });
+        } else if (err) {
+            return res.status(400).json({ error: 'Invalid file type. Only PDF files are allowed.' });
         }
 
-        // Convert file to base64
-        const base64File = req.file.buffer.toString('base64');
-        const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
-
-        // Save file metadata to database
-        const newFile = await prisma.file.create({
-            data: {
-                name: req.file.originalname,
-                url: fileUrl,
-                userId: req.userId
+        try {
+            // Verify authentication
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return res.status(401).json({ error: 'No token provided' });
             }
-        });
 
-        res.status(201).json(newFile);
-    } catch (error) {
-        console.error('Error uploading file:', error);
-        res.status(500).json({ 
-            error: 'Failed to upload file',
-            details: error.message 
-        });
-    }
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.userId = decoded.userId;
+
+            if (!req.file) {
+                return res.status(400).json({ error: 'No file uploaded' });
+            }
+
+            // Convert file to base64
+            const base64File = req.file.buffer.toString('base64');
+            const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
+
+            // Save file metadata to database
+            const newFile = await prisma.file.create({
+                data: {
+                    name: req.file.originalname,
+                    url: fileUrl,
+                    userId: req.userId
+                }
+            });
+
+            res.status(201).json(newFile);
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            if (error.name === 'JsonWebTokenError') {
+                return res.status(401).json({ error: 'Invalid token' });
+            }
+            res.status(500).json({ 
+                error: 'Failed to upload file',
+                details: error.message 
+            });
+        }
+    });
 });
 
-// Fetch files endpoint
+// Fetch files endpoint with improved error handling
 app.get('/api/files/files', authMiddleware, async (req, res) => {
     try {
         const files = await prisma.file.findMany({

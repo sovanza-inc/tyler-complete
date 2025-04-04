@@ -9,7 +9,7 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 // API URL configuration
 const API_BASE_URL = process.env.NODE_ENV === 'development' 
   ? 'http://localhost:5000'
-  : 'https://tyler-complete-slvb.vercel.app';
+  : 'https://tyler-complete-slvb.vercel.app/api';
 
 const Estimate = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +52,7 @@ const Estimate = () => {
           return;
         }
 
-        const response = await axios.get(`${API_BASE_URL}/api/files/files`, {
+        const response = await axios.get(`${API_BASE_URL}/files/files`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -113,7 +113,7 @@ const Estimate = () => {
         });
 
         const token = localStorage.getItem('token');
-        const response = await axios.post(`${API_BASE_URL}/api/files/upload`, formData, {
+        const response = await axios.post(`${API_BASE_URL}/files/upload`, formData, {
           headers: { 
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`
@@ -172,7 +172,7 @@ const Estimate = () => {
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/api/files/${id}`, {
+      await axios.delete(`${API_BASE_URL}/files/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         },
@@ -197,7 +197,7 @@ const Estimate = () => {
 
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.put(`${API_BASE_URL}/api/files/${id}`, formData, {
+        const response = await axios.put(`${API_BASE_URL}/files/${id}`, formData, {
           headers: { 
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`
