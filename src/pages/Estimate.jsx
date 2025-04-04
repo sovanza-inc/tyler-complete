@@ -3,6 +3,12 @@ import axios from 'axios';
 import '../assets/css/estimate.css';
 import Breadcrums from '../Componenets/Breadcrums';
 
+// API URL configuration
+const isDevelopment = process.env.NODE_ENV === 'development';
+const API_BASE_URL = isDevelopment 
+  ? import.meta.env.APP_API_URL || 'http://localhost:5000'
+  : 'https://tyler-complete-slvb.vercel.app';
+
 const Estimate = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [estimateData, setEstimateData] = useState([
@@ -34,7 +40,13 @@ const Estimate = () => {
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        const response = await axios.get('/api/files/files');
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE_URL}/api/files/files`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          withCredentials: true
+        });
         setFiles(response.data || []);
       } catch (error) {
         console.error('Error fetching files:', error);
@@ -63,8 +75,13 @@ const Estimate = () => {
       formData.append('file', file);
 
       try {
-        const response = await axios.post('/api/files/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_BASE_URL}/api/files/upload`, formData, {
+          headers: { 
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          },
+          withCredentials: true
         });
         setFiles((prevFiles) => [...prevFiles, response.data]);
       } catch (error) {
@@ -78,7 +95,13 @@ const Estimate = () => {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/files/${id}`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE_URL}/api/files/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        withCredentials: true
+      });
       setFiles((prevFiles) => prevFiles.filter((file) => file.id !== id));
     } catch (error) {
       console.error('Error deleting file:', error);
@@ -97,8 +120,13 @@ const Estimate = () => {
       formData.append('file', newFile);
 
       try {
-        const response = await axios.put(`/api/files/${id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        const token = localStorage.getItem('token');
+        const response = await axios.put(`${API_BASE_URL}/api/files/${id}`, formData, {
+          headers: { 
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          },
+          withCredentials: true
         });
         setFiles((prevFiles) =>
           prevFiles.map((file) => (file.id === id ? response.data : file))
