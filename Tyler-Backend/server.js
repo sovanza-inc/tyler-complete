@@ -22,7 +22,6 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['set-cookie']
 }));
 
 // Stripe webhook needs raw body 
@@ -51,31 +50,32 @@ app.post('/api/files/upload', authMiddleware, upload.single('file'), async (req,
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        // For now, we'll store the file data in base64 format in the URL field
-        // In production, you should use a cloud storage service like AWS S3
+        // Convert file to base64
         const base64File = req.file.buffer.toString('base64');
         const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
 
-        // Save file metadata to the database with user association
+        // Save file metadata to database
         const newFile = await prisma.file.create({
             data: {
                 name: req.file.originalname,
                 url: fileUrl,
-                userId: req.userId // Add user association
+                userId: req.userId
             }
         });
 
         res.status(201).json(newFile);
     } catch (error) {
         console.error('Error uploading file:', error);
-        res.status(500).json({ error: 'Failed to upload file' });
+        res.status(500).json({ 
+            error: 'Failed to upload file',
+            details: error.message 
+        });
     }
 });
 
-// Fetch all files endpoint
+// Fetch files endpoint
 app.get('/api/files/files', authMiddleware, async (req, res) => {
     try {
-        // Get only files belonging to the authenticated user
         const files = await prisma.file.findMany({
             where: {
                 userId: req.userId
@@ -84,10 +84,13 @@ app.get('/api/files/files', authMiddleware, async (req, res) => {
                 createdAt: 'desc'
             }
         });
-        res.status(200).json(files);
+        res.json(files);
     } catch (error) {
         console.error('Error fetching files:', error);
-        res.status(500).json({ error: 'Failed to fetch files' });
+        res.status(500).json({ 
+            error: 'Failed to fetch files',
+            details: error.message 
+        });
     }
 });
 
