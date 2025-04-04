@@ -5,6 +5,12 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../assets/css/payment.css';
 
+// API URL configuration
+const isDevelopment = process.env.NODE_ENV === 'development';
+const API_BASE_URL = isDevelopment 
+  ? import.meta.env.APP_API_URL || 'http://localhost:5000'
+  : 'https://tyler-complete-slvb.vercel.app';
+
 const stripePromise = loadStripe('pk_test_51NWncHB7S6nOH9ha2cIsYHSYgyHOMzf5sSbGEAcOtJ4mGq62OEldeA63pBgW9UhaDu6ECYIpYqMMBX0s7ewzZ4bv00NeXtT0Ya');
 
 const CARD_ELEMENT_OPTIONS = {
@@ -59,11 +65,12 @@ const PaymentForm = () => {
         // Fetch price details from backend
         const fetchPriceDetails = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/payments/price-details', {
+                const response = await axios.get(`${API_BASE_URL}/api/payments/price-details`, {
                     headers: { 
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    withCredentials: true
                 });
                 setPriceDetails(response.data);
             } catch (err) {
@@ -122,7 +129,7 @@ const PaymentForm = () => {
         try {
             // Create payment intent
             const { data: { clientSecret } } = await axios.post(
-                'http://localhost:5000/api/payments/create-payment-intent',
+                `${API_BASE_URL}/api/payments/create-payment-intent`,
                 {
                     customer: {
                         name: formData.fullName,
@@ -141,7 +148,8 @@ const PaymentForm = () => {
                     headers: { 
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    withCredentials: true
                 }
             );
 
