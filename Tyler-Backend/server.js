@@ -30,99 +30,105 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }));
 // For all other routes, then parse JSON
 app.use(express.json());
 
-
-
-
-// upload file data in storage 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadDir = path.join(__dirname, 'uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null,file.originalname);
-    },
-  });
-  
-  const upload = multer({ storage });
-  
-
-  app.post('/api/files/upload', upload.single('file'), async (req, res) => {
-    try {
-      const { filename, path: filePath } = req.file;
-  
-      // Save file metadata to the database
-      const newFile = await prisma.file.create({
-        data: {
-          name: filename,
-          url: `http://localhost:5000/uploads/${filename}`, // Adjust the URL as needed
-        },
-      });
-  
-      res.status(201).json(newFile);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      res.status(500).json({ error: 'Failed to upload file' });
+// Configure multer for memory storage (for serverless)
+const storage = multer.memoryStorage();
+const upload = multer({ 
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF files are allowed'));
+        }
     }
-  });
-  
-  // Fetch all files endpoint
-  app.get('/api/files/files', async (req, res) => {
+});
+
+app.post('/api/files/upload', upload.single('file'), async (req, res) => {
     try {
-      const files = await prisma.file.findMany();
-      res.status(200).json(files);
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        // For now, we'll store the file data in base64 format in the URL field
+        // In production, you should use a cloud storage service like AWS S3
+        const base64File = req.file.buffer.toString('base64');
+        const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
+
+        // Save file metadata to the database
+        const newFile = await prisma.file.create({
+            data: {
+                name: req.file.originalname,
+                url: fileUrl
+            }
+        });
+
+        res.status(201).json(newFile);
     } catch (error) {
-      console.error('Error fetching files:', error);
-      res.status(500).json({ error: 'Failed to fetch files' });
+        console.error('Error uploading file:', error);
+        res.status(500).json({ error: 'Failed to upload file' });
     }
-  });
-  
-  // Update file endpoint
-  app.put('/api/files/:id', upload.single('file'), async (req, res) => {
+});
+
+// Fetch all files endpoint
+app.get('/api/files/files', async (req, res) => {
     try {
-      const { id } = req.params;
-      const { filename, path: filePath } = req.file;
-  
-      // Update file metadata in the database
-      const updatedFile = await prisma.file.update({
-        where: { id: parseInt(id) },
-        data: {
-          name: filename,
-          url: `http://localhost:5000/uploads/${filename}`,
-        },
-      });
-  
-      res.status(200).json(updatedFile);
+        const files = await prisma.file.findMany();
+        res.status(200).json(files);
     } catch (error) {
-      console.error('Error updating file:', error);
-      res.status(500).json({ error: 'Failed to update file' });
+        console.error('Error fetching files:', error);
+        res.status(500).json({ error: 'Failed to fetch files' });
     }
-  });
-  
-  // Delete file endpoint
-  app.delete('/api/files/:id', async (req, res) => {
+});
+
+// Update file endpoint
+app.put('/api/files/:id', upload.single('file'), async (req, res) => {
     try {
-      const { id } = req.params;
-  
-      // Delete file metadata from the database
-      await prisma.file.delete({
-        where: { id: parseInt(id) },
-      });
-  
-      res.status(204).send();
+        const { id } = req.params;
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        // Convert file to base64
+        const base64File = req.file.buffer.toString('base64');
+        const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
+
+        // Update file metadata in the database
+        const updatedFile = await prisma.file.update({
+            where: { id: parseInt(id) },
+            data: {
+                name: req.file.originalname,
+                url: fileUrl
+            }
+        });
+
+        res.status(200).json(updatedFile);
     } catch (error) {
-      console.error('Error deleting file:', error);
-      res.status(500).json({ error: 'Failed to delete file' });
+        console.error('Error updating file:', error);
+        res.status(500).json({ error: 'Failed to update file' });
     }
-  });
-  
-  // Serve uploaded files statically
-  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-  
+});
+
+// Delete file endpoint
+app.delete('/api/files/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Delete file metadata from the database
+        await prisma.file.delete({
+            where: { id: parseInt(id) },
+        });
+
+        res.status(204).send();
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        res.status(500).json({ error: 'Failed to delete file' });
+    }
+});
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 
 // Root route
