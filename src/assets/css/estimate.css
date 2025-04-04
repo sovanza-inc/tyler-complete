@@ -588,3 +588,36 @@
     background-color: var(--color-status-error);
     color: white;
   }
+
+.upload-button {
+    transition: opacity 0.3s ease;
+}
+
+.upload-button.disabled {
+    pointer-events: none;
+}
+
+/* SweetAlert2 custom styles */
+.swal2-popup {
+    font-family: inherit;
+    border-radius: 8px;
+}
+
+.swal2-title {
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.swal2-html-container {
+    color: #666;
+}
+
+.swal2-confirm {
+    background-color: #4CAF50 !important;
+    border-radius: 4px !important;
+}
+
+.swal2-deny, .swal2-cancel {
+    background-color: #f44336 !important;
+    border-radius: 4px !important;
+}
