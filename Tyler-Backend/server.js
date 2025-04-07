@@ -16,15 +16,16 @@ const app = express();
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://tyler-complete.vercel.app', 'https://tyler-complete-slvb.vercel.app']
+        ? ['https://tyler-complete.vercel.app']
         : ['http://localhost:5000', 'http://localhost:5173'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     exposedHeaders: ['set-cookie']
 }));
 
-// Stripe webhook needs raw body 
+// Stripe webhook needs raw body parser for webhook verification
+
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 // For all other routes, then parse JSON
