@@ -1,16 +1,18 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import axios from 'axios';
 import '../assets/css/estimate.css';
+import { useNavigate } from 'react-router-dom';
 import Breadcrums from '../Componenets/Breadcrums';
 import Swal from 'sweetalert2';
 
 // API URL configuration
 const isDevelopment = process.env.NODE_ENV === 'development';
-const API_BASE_URL = isDevelopment 
+const API_BASE_URL = isDevelopment
   ? import.meta.env.APP_API_URL || 'http://localhost:5000'
   : 'https://tyler-complete-slvb.vercel.app';
 
 const Estimate = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [estimateData, setEstimateData] = useState([
     {
@@ -79,15 +81,19 @@ const Estimate = () => {
       try {
         setIsUploading(true);
         const token = localStorage.getItem('token');
-        const response = await axios.post(`${API_BASE_URL}/api/files/upload`, formData, {
-          headers: { 
+
+        // Upload to Node.js backend (which now handles table extraction and storage)
+        const uploadResponse = await axios.post(`${API_BASE_URL}/api/files/upload`, formData, {
+          headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`
           },
           withCredentials: true
         });
-        setFiles((prevFiles) => [...prevFiles, response.data]);
-        
+
+        const newFile = uploadResponse.data;
+        setFiles(prevFiles => [...prevFiles, newFile]);
+
         // Show success alert
         Swal.fire({
           icon: 'success',
@@ -111,6 +117,40 @@ const Estimate = () => {
         icon: 'error',
         title: 'Invalid File',
         text: 'Please upload a valid PDF file.'
+      });
+    }
+  };
+
+  const handleViewTable = async (fileId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/api/files/${fileId}/table`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        withCredentials: true
+      });
+
+      if (response.data) {
+        navigate('/view-table', {
+          state: {
+            tableData: response.data,
+            fileName: files.find(f => f.id === fileId)?.name
+          }
+        });
+      } else {
+        Swal.fire({
+          icon: 'warning',
+          title: 'No Table Data',
+          text: 'No table data was extracted from this file'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching table data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch table data: ' + error.message
       });
     }
   };
@@ -144,7 +184,7 @@ const Estimate = () => {
       try {
         const token = localStorage.getItem('token');
         const response = await axios.put(`${API_BASE_URL}/api/files/${id}`, formData, {
-          headers: { 
+          headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`
           },
@@ -211,18 +251,18 @@ const Estimate = () => {
       </div>
 
       <div className="upload-section">
-        <input 
-          type="text" 
-          className="upload-input" 
-          placeholder="Search contractor estimates" 
+        <input
+          type="text"
+          className="upload-input"
+          placeholder="Search contractor estimates"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <input 
-          type="file" 
-          id="file-upload" 
-          style={{ display: 'none' }} 
-          onChange={handleUpload} 
+        <input
+          type="file"
+          id="file-upload"
+          style={{ display: 'none' }}
+          onChange={handleUpload}
           accept="application/pdf"
           disabled={isUploading}
         />
@@ -244,17 +284,18 @@ const Estimate = () => {
             <div key={file.id} className="file-item">
               {editingFile === file.id ? (
                 <div className="edit-file-section">
-                  <input 
-                    type="file" 
-                    id={`edit-file-${file.id}`} 
-                    style={{ display: 'none' }} 
-                    onChange={handleNewFileChange} 
+                  <input
+                    type="file"
+                    id={`edit-file-${file.id}`}
+                    style={{ display: 'none' }}
+                    onChange={handleNewFileChange}
                     accept="application/pdf"
                   />
                   <label htmlFor={`edit-file-${file.id}`} className="action-button edit-file-button">
                     Choose New File
                   </label>
-                  {newFile && <span>{newFile.name}</span>}
+
+                  {newFile && <span className="file-name">{newFile.name}</span>}
                 </div>
               ) : (
                 <span>{file.name}</span>
@@ -269,7 +310,35 @@ const Estimate = () => {
                   <>
                     <button className="edit-button" onClick={() => handleEdit(file.id)}>Edit</button>
                     <button className="delete-button" onClick={() => handleDelete(file.id)}>Delete</button>
-                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="view-button">View</a>
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="view-button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // Create a new blob from the base64 data
+                        const byteCharacters = atob(file.url.split(',')[1]);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                          byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+                        // Create an object URL and open it
+                        const blobUrl = URL.createObjectURL(blob);
+                        window.open(blobUrl, '_blank');
+                      }}
+                    >
+                      View PDF
+                    </a>
+                    <button
+                      className="view-table-button"
+                      onClick={() => handleViewTable(file.id)}
+                    >
+                      View Table
+                    </button>
                   </>
                 )}
               </div>
@@ -311,20 +380,20 @@ const Estimate = () => {
           <h3>Actions</h3>
         </div>
         <div className="actions-buttons">
-          <button 
-            className="action-button notify-button" 
+          <button
+            className="action-button notify-button"
             onClick={handleNotifyTeam}
           >
             Notify Team
           </button>
-          <button 
-            className="action-button download-button" 
+          <button
+            className="action-button download-button"
             onClick={handleDownloadReport}
           >
             Download Report
           </button>
-          <button 
-            className="action-button flag-button" 
+          <button
+            className="action-button flag-button"
             onClick={handleFlagReview}
           >
             Flag for Review

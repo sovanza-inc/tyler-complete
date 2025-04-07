@@ -8,7 +8,7 @@ const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs');
-
+const axios = require('axios');
 
 // const prisma = new PrismaClient();
 const app = express();
@@ -63,6 +63,31 @@ app.post('/api/files/upload', upload.single('file'), async (req, res) => {
             }
         });
 
+        // Extract table data from Python server
+        try {
+            const formData = new FormData();
+            formData.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname);
+            
+            const pythonServerResponse = await axios.post('http://127.0.0.1:5000/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            // Store the extracted table data in the database
+            if (pythonServerResponse.data) {
+                await prisma.tableData.create({
+                    data: {
+                        fileId: newFile.id,
+                        content: JSON.stringify(pythonServerResponse.data)
+                    }
+                });
+            }
+        } catch (extractionError) {
+            console.error('Table extraction error:', extractionError);
+            // We continue even if extraction fails
+        }
+
         res.status(201).json(newFile);
     } catch (error) {
         console.error('Error uploading file:', error);
@@ -78,6 +103,25 @@ app.get('/api/files/files', async (req, res) => {
     } catch (error) {
         console.error('Error fetching files:', error);
         res.status(500).json({ error: 'Failed to fetch files' });
+    }
+});
+
+// Get table data for a specific file
+app.get('/api/files/:id/table', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const tableData = await prisma.tableData.findFirst({
+            where: { fileId: parseInt(id) }
+        });
+        
+        if (!tableData) {
+            return res.status(404).json({ error: 'No table data found for this file' });
+        }
+        
+        res.status(200).json(JSON.parse(tableData.content));
+    } catch (error) {
+        console.error('Error fetching table data:', error);
+        res.status(500).json({ error: 'Failed to fetch table data' });
     }
 });
 
@@ -102,6 +146,35 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
             }
         });
 
+        // Re-extract table data from Python server
+        try {
+            const formData = new FormData();
+            formData.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname);
+            
+            const pythonServerResponse = await axios.post('http://127.0.0.1:5000/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            // Update or create the table data in the database
+            if (pythonServerResponse.data) {
+                await prisma.tableData.upsert({
+                    where: { fileId: parseInt(id) },
+                    update: {
+                        content: JSON.stringify(pythonServerResponse.data)
+                    },
+                    create: {
+                        fileId: parseInt(id),
+                        content: JSON.stringify(pythonServerResponse.data)
+                    }
+                });
+            }
+        } catch (extractionError) {
+            console.error('Table extraction error:', extractionError);
+            // We continue even if extraction fails
+        }
+
         res.status(200).json(updatedFile);
     } catch (error) {
         console.error('Error updating file:', error);
@@ -113,6 +186,11 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
 app.delete('/api/files/:id', async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Delete associated table data first
+        await prisma.tableData.deleteMany({
+            where: { fileId: parseInt(id) },
+        });
 
         // Delete file metadata from the database
         await prisma.file.delete({
@@ -128,8 +206,6 @@ app.delete('/api/files/:id', async (req, res) => {
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-
 
 // Root route
 app.get('/', (req, res) => {
