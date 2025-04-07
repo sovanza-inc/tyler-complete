@@ -1,8 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/:path*", "destination": "https://tyler-complete-slvb.vercel.app/api/:path*" }
   ]
-} 
+}
