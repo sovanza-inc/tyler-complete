@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../assets/css/auth.css';
 
 // API URL configuration
-// const isDevelopment = process.env.NODE_ENV === 'development';
-const API_BASE_URL = '';
+const isDevelopment = process.env.NODE_ENV === 'development';
+const API_BASE_URL = isDevelopment 
+  ? import.meta.env.APP_API_URL || 'http://localhost:5000'
+  : 'https://tyler-complete-slvb.vercel.app';
 
 
 const SignIn = () => {
@@ -59,7 +61,7 @@ const SignIn = () => {
     }
 
     try {
-      const response = await fetch(`/api/auth/signin`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
