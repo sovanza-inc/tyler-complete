@@ -24,7 +24,8 @@ app.use(cors({
     exposedHeaders: ['set-cookie']
 }));
 
-// Stripe webhook needs raw body 
+// Stripe webhook needs raw body parser for webhook verification
+
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 // For all other routes, then parse JSON
