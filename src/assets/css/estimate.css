@@ -450,7 +450,7 @@
 .file-actions a.view-button {
     padding: 0.5rem 1rem;
     border-radius: var(--border-radius-sm);
-    background-color: var(--color-status-success);
+    background-color: #6366f1;
     color: white;
     text-decoration: none;
     font-size: 0.875rem;
@@ -471,6 +471,11 @@
     box-shadow: var(--shadow-subtle);
 }
 
+.file-name {
+    word-break: break-word;
+    margin-bottom: 0.5rem;
+  }
+
 /* Responsive Design for Files List */
 @media (max-width: 768px) {
     .files-list {
@@ -489,29 +494,69 @@
     }
 
     .file-actions {
+        flex-direction: column;
+        gap: 0.5rem;
         width: 100%;
-        justify-content: flex-end;
     }
+    .file-actions button,
+  .file-actions a.view-button {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .edit-file-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .edit-file-section label {
+    width: 100%;
+    text-align: center;
+  }
 }
+
+/* Add to your CSS file */
+.file-name {
+    word-break: break-word;
+    margin-bottom: 0.5rem;
+  }
+  
+  @media (min-width: 769px) {
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .file-name {
+      flex: 1;
+      margin-right: 1rem;
+      margin-bottom: 0;
+    }
+    
+    .file-actions {
+      flex-shrink: 0;
+    }
+  }
 
 @media (max-width: 480px) {
     .file-item span {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
     }
 
     .file-item input {
         font-size: 0.875rem;
     }
 
-    .file-actions button {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
-    }
-
-    .file-actions a.view-button {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.75rem;
-    }
+    .file-actions button,
+  .file-actions a.view-button {
+    padding: 0.65rem;
+    font-size: 0.8rem;
+  }
 }
 
 /* Additional Adjustments for Very Small Screens */
@@ -615,3 +660,114 @@
         transform: rotate(360deg);
     }
 }
+
+/* table view */
+/* Add to your existing CSS */
+.view-table-button {
+    background-color: #10b981;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-subtle);
+    border: none;
+  }
+  
+  .view-table-button:hover {
+    background-color: #059669;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+  }
+  
+  .file-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .file-actions {
+      width: 100%;
+    }
+    
+    .file-actions button,
+    .file-actions a {
+      flex: 1;
+      text-align: center;
+      padding: 0.75rem;
+    }
+  }
+  
+  /* Table view styles */
+  .table-view-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: white;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-medium);
+  }
+  
+  .table-view-container h2 {
+    color: var(--color-primary-900);
+    margin-bottom: 1.5rem;
+    text-align: center;
+    word-break: break-word;
+  }
+  
+  .table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 2rem;
+    min-height: 300px;
+  }
+  
+  .table-view-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+  }
+  
+  .table-view-container th,
+  .table-view-container td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border: 1px solid var(--color-neutral-300);
+  }
+  
+  .table-view-container th {
+    background-color: var(--color-primary-700);
+    color: white;
+    font-weight: 600;
+  }
+  
+  .table-view-container tr:nth-child(even) {
+    background-color: var(--color-neutral-100);
+  }
+  
+  .table-view-container tr:hover {
+    background-color: var(--color-neutral-200);
+  }
+  
+  .back-button {
+    display: block;
+    margin: 0 auto;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-status-info);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  .back-button:hover {
+    background-color: var(--color-accent-600);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+  }

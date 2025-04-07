@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import React from "react";
 import { useState, useEffect } from "react";
 import {
@@ -20,6 +21,8 @@ import ForgetPassword from "./pages/ForgetPassword";
 import Loader from "./Componenets/Loader";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from './components/ErrorBoundary';
+import TableView from "./pages/TableView";
+
 import './assets/css/error.css';
 import './App.css';
 // Auth check function
@@ -81,6 +84,11 @@ const router = createBrowserRouter([
       {
         path:"/Profile",
         element: <Profile/>,
+      },
+      
+      {
+        path:"/view-table",
+        element: <TableView/>,
       }
     ],
   },

@@ -250,6 +250,24 @@ router.post('/reset-password', async (req, res) => {
   const { email, newPassword } = req.body;
 
   try {
+    // First get the user's current password from the database
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { password: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if the new password is the same as the current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({ 
+        error: 'New password must be different from your current password' 
+      });
+    }
+
     // Hash the new password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
