@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../assets/css/forgot.css';
+
 // API URL configuration
 const isDevelopment = process.env.NODE_ENV === 'development';
 const API_BASE_URL = isDevelopment 
@@ -20,6 +21,7 @@ const ForgetPassword = () => {
   const [timer, setTimer] = useState(120); // 120 seconds
   const navigate = useNavigate();
   const otpInputs = useRef([]); // Refs for OTP input fields
+  const otpContainerRef = useRef(null); // Ref for the OTP container
 
   // Timer logic
   useEffect(() => {
@@ -47,9 +49,32 @@ const ForgetPassword = () => {
   };
 
   // Handle OTP input backspace
-  const handleOtpBackspace = (index) => {
-    if (index > 0 && !formData.otp[index]) {
+  const handleOtpBackspace = (index, e) => {
+    // Only move focus if the current input is empty and backspace was pressed
+    if (e.key === 'Backspace' && index > 0 && !formData.otp[index]) {
       otpInputs.current[index - 1].focus();
+    }
+  };
+
+  // Handle OTP paste functionality
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text');
+    const otpRegex = /^\d{4}$/; // Regex to check if pasted content is exactly 4 digits
+
+    if (otpRegex.test(pastedData)) {
+      const otpArray = pastedData.split('');
+      
+      // Update all OTP fields at once
+      setFormData({ 
+        ...formData, 
+        otp: otpArray 
+      });
+
+      // Set focus to the last input after paste
+      if (otpInputs.current[3]) {
+        otpInputs.current[3].focus();
+      }
     }
   };
 
@@ -241,7 +266,11 @@ const ForgetPassword = () => {
 
           {step === 2 && (
             <>
-              <div className="otp-input-group">
+              <div 
+                className="otp-input-group" 
+                ref={otpContainerRef}
+                onPaste={handleOtpPaste}
+              >
                 {[0, 1, 2, 3].map((index) => (
                   <input
                     key={index}
@@ -249,20 +278,27 @@ const ForgetPassword = () => {
                     maxLength={1}
                     value={formData.otp[index]}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Backspace') {
-                        handleOtpBackspace(index);
-                      }
-                    }}
+                    onKeyDown={(e) => handleOtpBackspace(index, e)}
                     ref={(el) => (otpInputs.current[index] = el)}
                     disabled={isLoading}
                     className="otp-input"
                   />
                 ))}
               </div>
+              <p className="otp-paste-helper">You can paste the complete 4-digit OTP</p>
               <div className="otp-timer">
                 Time remaining: {Math.floor(timer / 60)}:{timer % 60 < 10 ? `0${timer % 60}` : timer % 60}
               </div>
+              {timer === 0 && (
+                <button 
+                  type="button"
+                  onClick={handleSendOTP}
+                  className="resend-otp-button"
+                  disabled={isLoading}
+                >
+                  Resend OTP
+                </button>
+              )}
             </>
           )}
 
@@ -278,6 +314,7 @@ const ForgetPassword = () => {
                   onChange={handleChange}
                   placeholder="Enter new password"
                   disabled={isLoading}
+                  autoComplete="new-password"
                 />
               </div>
               <div className="form-group">
@@ -290,12 +327,13 @@ const ForgetPassword = () => {
                   onChange={handleChange}
                   placeholder="Confirm new password"
                   disabled={isLoading}
+                  autoComplete="new-password"
                 />
               </div>
             </>
           )}
 
-          <button type="submit" disabled={isLoading}>
+          <button type="submit" disabled={isLoading} className="auth-submit-btn">
             {isLoading
               ? 'Processing...'
               : step === 1

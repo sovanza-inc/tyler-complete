@@ -6,8 +6,9 @@ const authMiddleware = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 
-const nodemailer = require('nodemailer');
-const otpGenerator = require('otp-generator');
+// Import Resend instead of Nodemailer
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Signup route
 router.post('/signup', async (req, res) => {
@@ -163,22 +164,9 @@ router.put('/change-password', authMiddleware, async (req, res) => {
     }
 });
 
-
 // forgot password
-
-
 // Store OTPs temporarily (in production, use a database or cache like Redis)
 const otpStore = {};
-
-
-// Configure Nodemailer for sending emails
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use your email service (e.g., Gmail, Outlook)
-  auth: {
-    user: process.env.EMAIL_USER, // Your email
-    pass: process.env.EMAIL_PASSWORD, // Your email password
-  },
-});
 
 // Generate and Send OTP
 router.post('/generate-otp', async (req, res) => {
@@ -198,19 +186,93 @@ router.post('/generate-otp', async (req, res) => {
 
     otpStore[email] = {
       otp,
-      expiresAt: Date.now() + 120000,
-    }
-
-
-    // Send OTP via email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Password Reset OTP',
-      text: `Your OTP for password reset is: ${otp}. It will expires in 2 minutes.`,
+      expiresAt: Date.now() + 120000, // 2 minutes expiry
     };
 
-    await transporter.sendMail(mailOptions);
+    // Create HTML email template
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Password Reset</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .container {
+          padding: 20px;
+          border: 1px solid #e9e9e9;
+          border-radius: 5px;
+        }
+        .header {
+          background-color: #4a6cf7;
+          color: white;
+          padding: 15px;
+          text-align: center;
+          border-radius: 5px 5px 0 0;
+        }
+        .content {
+          padding: 20px;
+        }
+        .otp-container {
+          margin: 25px 0;
+          text-align: center;
+        }
+        .otp {
+          font-size: 30px;
+          font-weight: bold;
+          letter-spacing: 10px;
+          color: #4a6cf7;
+        }
+        .footer {
+          margin-top: 20px;
+          font-size: 12px;
+          color: #999;
+          text-align: center;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>Password Reset</h2>
+        </div>
+        <div class="content">
+          <p>Hello,</p>
+          <p>You have requested to reset your password. Please use the following OTP to complete the process:</p>
+          
+          <div class="otp-container">
+            <div class="otp">${otp}</div>
+          </div>
+          
+          <p>This OTP will expire in 2 minutes.</p>
+          <p>If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Your Company. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    // Send OTP via Resend
+    const { data, error: sendError } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL,
+      to: email,
+      subject: 'Password Reset OTP',
+      html: htmlTemplate,
+    });
+
+    if (sendError) {
+      console.error('Error sending email with Resend:', sendError);
+      return res.status(500).json({ error: 'Failed to send OTP email' });
+    }
 
     res.status(200).json({ message: 'OTP sent successfully' });
   } catch (error) {
@@ -284,7 +346,5 @@ router.post('/reset-password', async (req, res) => {
     res.status(500).json({ error: 'Failed to reset password' });
   }
 });
-
-
 
 module.exports = router;
