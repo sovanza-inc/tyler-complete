@@ -46,15 +46,12 @@
   }
   
   .auth-error {
-    background-color: #fee2e2;
-    color: #dc2626;
-    padding: 14px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    background-color: #fff1f0;
+    border: 1px solid #ffccc7;
+    color: #ff4d4f;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
   }
   
   .auth-error::before {
@@ -249,22 +246,17 @@
   
   
   .auth-link-back{
-    background: linear-gradient(135deg, #2838a1 0%, #1c2b8f 100%);
-    color: white;
-    padding: 14px;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+    background: none;
+  border: none;
+  color: #4a6cf7;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  font-size: 14px;
   }
   
   .auth-link-back:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(40, 56, 145, 0.2);
+    color: #3b5bd9;
   }
   
   .auth-link-back:active {
@@ -283,10 +275,10 @@
 
   /* OTP Timer */
 .otp-timer {
-  margin-top: 10px;
-  font-size: 14px;
-  color: #ff0000;
   text-align: center;
+  margin: 10px 0;
+  font-size: 14px;
+  color: #666;
 }
 
 /* Error Message */
@@ -323,7 +315,8 @@ button[type="submit"]:disabled {
 .otp-input-group {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 15px;
+  gap: 10px;
+  margin: 20px 0;
 }
 
 /* OTP Input Field */
@@ -331,13 +324,60 @@ button[type="submit"]:disabled {
   width: 50px;
   height: 50px;
   text-align: center;
-  font-size: 18px;
+  font-size: 24px;
   border: 1px solid #ccc;
-  border-radius: 5px;
-  margin: 0 5px;
+  border-radius: 8px;
+  transition: all 0.3s;
 }
 
 .otp-input:focus {
-  border-color: #007bff;
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.2);
   outline: none;
 }
+
+.otp-paste-helper {
+  text-align: center;
+  color: #777;
+  font-size: 12px;
+  margin: 5px 0 15px;
+}
+
+.resend-otp-button {
+  background-color: transparent;
+  color: #4a6cf7;
+  border: 1px solid #4a6cf7;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: block;
+  margin: 10px auto;
+  transition: all 0.3s;
+}
+.resend-otp-button:hover {
+  background-color: rgba(74, 108, 247, 0.1);
+}
+
+.auth-submit-btn {
+  background-color: #4a6cf7;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 100%;
+  margin-top: 20px;
+  transition: background-color 0.3s;
+}
+
+.auth-submit-btn:hover {
+  background-color: #3b5bd9;
+}
+
+.auth-submit-btn:disabled {
+  background-color: #a4afd7;
+  cursor: not-allowed;
+}
+
