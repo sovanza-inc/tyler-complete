@@ -85,7 +85,7 @@ app.post('/api/files/upload', upload.single('file'), async (req, res) => {
             }
         } catch (extractionError) {
             console.error('Table extraction error:', extractionError);
-            // We continue even if extraction fails
+            // We continue even if extraction fails (code for error)
         }
 
         res.status(201).json(newFile);
