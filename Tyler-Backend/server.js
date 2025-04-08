@@ -125,7 +125,7 @@ app.get('/api/files/:id/table', async (req, res) => {
     }
 });
 
-// Update file endpoint for file
+// Update file endpoint
 app.put('/api/files/:id', upload.single('file'), async (req, res) => {
     try {
         const { id } = req.params;
