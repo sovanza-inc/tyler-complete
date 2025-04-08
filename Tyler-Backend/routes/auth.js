@@ -10,7 +10,7 @@ const router = express.Router();
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Signup route code
+// Signup route 
 router.post('/signup', async (req, res) => {
     try {
         const { email, password, fullName } = req.body;
