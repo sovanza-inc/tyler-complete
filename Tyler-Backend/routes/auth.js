@@ -10,7 +10,7 @@ const router = express.Router();
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Signup route code
+// Signup route 
 router.post('/signup', async (req, res) => {
     try {
         const { email, password, fullName } = req.body;
@@ -263,7 +263,7 @@ router.post('/generate-otp', async (req, res) => {
 
     // Send OTP via Resend
     const { data, error: sendError } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Password Reset <no-reply@yourdomain.com>', // Fallback value
+      from: 'onboarding@resend.dev', // Using Resend's default sender for testing
       to: email,
       subject: 'Password Reset OTP',
       html: htmlTemplate,
@@ -334,7 +334,7 @@ router.post('/reset-password', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Update the user's password in the database
+    // Update the user's password 
     await prisma.user.update({
       where: { email },
       data: { password: hashedPassword },
