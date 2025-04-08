@@ -334,7 +334,7 @@ router.post('/reset-password', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Update the user's password in the database
+    // Update the user's password 
     await prisma.user.update({
       where: { email },
       data: { password: hashedPassword },
