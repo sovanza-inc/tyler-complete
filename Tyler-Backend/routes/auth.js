@@ -263,7 +263,7 @@ router.post('/generate-otp', async (req, res) => {
 
     // Send OTP via Resend
     const { data, error: sendError } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL,
+      from: process.env.RESEND_FROM_EMAIL || 'Password Reset <no-reply@yourdomain.com>', // Fallback value
       to: email,
       subject: 'Password Reset OTP',
       html: htmlTemplate,
