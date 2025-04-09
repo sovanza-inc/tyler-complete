@@ -51,8 +51,32 @@ app.post('/api/files/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        // For now, we'll store the file data in base64 format in the URL field
-        // In production, you should use a cloud storage service like AWS S3
+        // Create form data to send to Flask server
+        const formData = new FormData();
+        formData.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname);
+
+        // Send the file to Flask server
+        // Use environment variable for Flask server URL or default to local for development
+        const flaskServerUrl = process.env.FLASK_SERVER_URL || 'https://tylerpdfextractor.paragonestimator.com/upload';
+        console.log(`Sending file to Flask server at: ${flaskServerUrl}`);
+        
+        // Variable to store table data from Flask server
+        let tableData;
+        
+        try {
+            const flaskResponse = await axios.post(flaskServerUrl, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            tableData = flaskResponse.data;
+        } catch (error) {
+            console.error('Flask server error details:', error.response?.data || error.message);
+            throw new Error(`Flask server error: ${error.message}`);
+        }
+
+        // Store the file data in base64 format
         const base64File = req.file.buffer.toString('base64');
         const fileUrl = `data:${req.file.mimetype};base64,${base64File}`;
 
@@ -61,35 +85,20 @@ app.post('/api/files/upload', upload.single('file'), async (req, res) => {
             data: {
                 name: req.file.originalname,
                 url: fileUrl
+                // Note: According to the Prisma schema, File model only has name and url fields
+                // The createdAt and updatedAt fields are automatically handled by Prisma
             }
         });
 
-        // Extract table data from Python server
-        try {
-            const formData = new FormData();
-            formData.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname);
-            
-            const pythonServerResponse = await axios.post('http://127.0.0.1:5000/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-            
-            // Store the extracted table data in the database
-            if (pythonServerResponse.data) {
-                await prisma.tableData.create({
-                    data: {
-                        fileId: newFile.id,
-                        content: JSON.stringify(pythonServerResponse.data)
-                    }
-                });
+        // Save the table data
+        await prisma.tableData.create({
+            data: {
+                fileId: newFile.id,
+                content: JSON.stringify(tableData) // Store the JSON data as a string per schema
             }
-        } catch (extractionError) {
-            console.error('Table extraction error:', extractionError);
-            // We continue even if extraction fails
-        }
+        });
 
-        res.status(201).json(newFile);
+        return res.status(201).json(newFile);
     } catch (error) {
         console.error('Error uploading file:', error);
         res.status(500).json({ error: 'Failed to upload file' });
@@ -118,8 +127,38 @@ app.get('/api/files/:id/table', async (req, res) => {
         if (!tableData) {
             return res.status(404).json({ error: 'No table data found for this file' });
         }
-        
-        res.status(200).json(JSON.parse(tableData.content));
+
+        // Parse the JSON string back to an object before returning
+        try {
+            const parsedData = JSON.parse(tableData.content);
+            
+            // Transform the data to match what the frontend expects
+            if (parsedData.tables && parsedData.tables.length > 0) {
+                // Get the first table
+                const firstTable = parsedData.tables[0];
+                
+                // Extract columns from the first row (assuming first row contains headers)
+                const columns = firstTable.data.length > 0 ? firstTable.data[0] : [];
+                
+                // Extract rows (skip the first row if it contains headers)
+                const rows = firstTable.data.length > 1 ? firstTable.data.slice(1) : [];
+                
+                // Return data in the format expected by the frontend
+                return res.json({
+                    columns: columns,
+                    rows: rows
+                });
+            } else {
+                // No tables found
+                return res.json({
+                    columns: [],
+                    rows: []
+                });
+            }
+        } catch (parseError) {
+            console.error('Error parsing table data JSON:', parseError);
+            return res.status(500).json({ error: 'Failed to parse table data', details: tableData.content.substring(0, 100) + '...' });
+        }
     } catch (error) {
         console.error('Error fetching table data:', error);
         res.status(500).json({ error: 'Failed to fetch table data' });
@@ -152,7 +191,11 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
             const formData = new FormData();
             formData.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname);
             
-            const pythonServerResponse = await axios.post('http://127.0.0.1:5000/upload', formData, {
+            // Use environment variable for Flask server URL or default to local for development
+            const flaskServerUrl = process.env.FLASK_SERVER_URL || 'http://127.0.0.1:5000/upload';
+            console.log(`Sending file to Flask server at: ${flaskServerUrl}`);
+            
+            const pythonServerResponse = await axios.post(flaskServerUrl, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -163,11 +206,11 @@ app.put('/api/files/:id', upload.single('file'), async (req, res) => {
                 await prisma.tableData.upsert({
                     where: { fileId: parseInt(id) },
                     update: {
-                        content: JSON.stringify(pythonServerResponse.data)
+                        content: JSON.stringify(pythonServerResponse.data) // Store as string per schema
                     },
                     create: {
                         fileId: parseInt(id),
-                        content: JSON.stringify(pythonServerResponse.data)
+                        content: JSON.stringify(pythonServerResponse.data) // Store as string per schema
                     }
                 });
             }
